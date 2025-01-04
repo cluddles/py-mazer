@@ -21,8 +21,15 @@ class Window:
     def close(self):
         self.__is_running = False
 
-    def draw_line(self, line, fill_colour="black"):
-        line.draw(self.__canvas, fill_colour)
+    def draw_line(self, x1, y1, x2, y2, fill_colour="black"):
+        self.__canvas.create_line(x1, y1, x2, y2, fill = fill_colour, width = 2)
 
-    def draw_box(self, box, fill_colour="black"):
-        box.draw(self.__canvas, fill_colour)
+    def draw_box(self, x1, y1, x2, y2, n=True, e=True, s=True, w=True, fill_colour="black"):
+        if n:
+            self.draw_line(x1, y1, x2, y1, fill_colour)
+        if e:
+            self.draw_line(x2, y1, x2, y2, fill_colour)
+        if s:
+            self.draw_line(x1, y2, x2, y2, fill_colour)
+        if w:
+            self.draw_line(x1, y1, x1, y2, fill_colour)
