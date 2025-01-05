@@ -8,7 +8,7 @@ def main():
 
     maze = Maze(20, 20, 50, 50, 20, 20, win)
     maze.cell_at(1, 1).e = False
-    maze.draw_all_cells()
+    maze.draw_all()
 
     win.wait_for_close()
 
