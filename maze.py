@@ -9,7 +9,17 @@ class Cell:
         self.s = True
 
 class Maze:
-    def __init__(self, num_cells_x, num_cells_y, x1 = 0, y1 = 0, cell_width = 16, cell_height = 16, win = None, seed = 1):
+    def __init__(
+            self,
+            num_cells_x,
+            num_cells_y,
+            x1 = 0,
+            y1 = 0,
+            cell_width = 16,
+            cell_height = 16,
+            win = None,
+            seed = None
+            ):
         self.num_cells_x = num_cells_x
         self.num_cells_y = num_cells_y
         self.x1 = x1
@@ -32,24 +42,26 @@ class Maze:
     def cell_at(self, cx, cy):
         return self._cells[self._cell_index(cx, cy)]
 
+    def is_in_bounds(self, cx, cy):
+        return not (cx < 0 or cy < 0 or cx >= self.num_cells_x or cy >= self.num_cells_y)
+
+    def has_wall(self, cx, cy, dir):
+        if dir == Dir.E:
+            return self.cell_at(cx, cy).e
+        elif dir == Dir.S:
+            return self.cell_at(cx, cy).s
+        elif dir == Dir.W:
+            return cx == 0 or self.cell_at(cx-1, cy).e
+        elif dir == Dir.N:
+            return cy == 0 or self.cell_at(cx, cy-1).s
+
     def cell_draw_pos(self, cx, cy):
         return Point(self.x1 + cx * self.cell_width, self.y1 + cy * self.cell_height)
 
     def draw_cell(self, cx, cy):
         cell = self.cell_at(cx, cy)
         e = cell.e
-        s = cell.s
-        (x1, y1) = self.cell_draw_pos(cx, cy)
-        (x2, y2) = self.cell_draw_pos(cx + 1, cy + 1)
-        if e:
-            self.win.draw_line(x2, y1, x2, y2)
-        if s:
-            self.win.draw_line(x1, y2, x2, y2)
-
-    def redraw_cell(self, cx, cy):
-        cell = self.cell_at(cx, cy)
-        e = cell.e
-        s = cell.s
+        s = cell.s and not (cx == self.num_cells_x - 1 and cy == self.num_cells_y - 1)
         (x1, y1) = self.cell_draw_pos(cx, cy)
         (x2, y2) = self.cell_draw_pos(cx + 1, cy + 1)
         blank_col = "white"
@@ -58,7 +70,7 @@ class Maze:
         self.win.draw_line(x1, y2, x2, y2, fill_colour = wall_col if s else blank_col)
 
     def draw_all(self):
-        self.win.draw_line(self.x1, self.y1, self.x1 + self.num_cells_x * self.cell_width, self.y1)
+        self.win.draw_line(self.x1 + self.cell_width, self.y1, self.x1 + self.num_cells_x * self.cell_width, self.y1)
         self.win.draw_line(self.x1, self.y1, self.x1, self.y1 + self.num_cells_y * self.cell_height)
         for cy in range(0, self.num_cells_y):
             for cx in range(0, self.num_cells_x):
@@ -69,7 +81,7 @@ class Maze:
         (x2, y2) = self.cell_draw_pos(cx2, cy2)
         hcw = self.cell_width / 2
         hch = self.cell_height / 2
-        self.win.draw_line(x1 + hcw, y1 + hch, x2 + hcw, y2 + hch, fill_colour = "gray" if undo else "red")
+        self.win.draw_line(x1 + hcw, y1 + hch, x2 + hcw, y2 + hch, fill_colour = "#cccccc" if undo else "red")
 
     def animate(self, anim_delay = 0.005):
         self.win.redraw()
@@ -98,16 +110,34 @@ class Maze:
                 # Break walls in relevant cell (neighbour for N, W edges), and redraw
                 if next_dir == Dir.E:
                     self.cell_at(cx, cy).e = False
-                    self.redraw_cell(cx, cy)
+                    self.draw_cell(cx, cy)
                 elif next_dir == Dir.S:
                     self.cell_at(cx, cy).s = False
-                    self.redraw_cell(cx, cy)
+                    self.draw_cell(cx, cy)
                 elif next_dir == Dir.W:
                     self.cell_at(cx-1, cy).e = False
-                    self.redraw_cell(cx-1, cy)
+                    self.draw_cell(cx-1, cy)
                 elif next_dir == Dir.N:
                     self.cell_at(cx, cy-1).s = False
-                    self.redraw_cell(cx, cy-1)
+                    self.draw_cell(cx, cy-1)
                 self.animate(anim_delay)
                 (ncx, ncy) = next
                 self.break_walls(ncx, ncy, visited, anim_delay)
+
+    def solve_dfs(self, cx, cy, goal_x, goal_y, visited = set(), anim_delay = 0.02):
+        if cx == goal_x and cy == goal_y:
+            return True
+        visited.add(Point(cx, cy))
+        for dir in list(Dir):
+            if self.has_wall(cx, cy, dir):
+                continue
+            next = Point(cx + dir.value.x, cy + dir.value.y)
+            if next in visited:
+                continue
+            self.draw_move(cx, cy, next.x, next.y, False)
+            self.animate(anim_delay)
+            result = self.solve_dfs(next.x, next.y, goal_x, goal_y, visited, anim_delay)
+            if result:
+                return result
+            self.draw_move(cx, cy, next.x, next.y, True)
+        return False
