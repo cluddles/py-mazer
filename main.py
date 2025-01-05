@@ -10,6 +10,8 @@ def main():
     maze.cell_at(1, 1).e = False
     maze.draw_all()
 
+    maze.break_walls(0, 0)
+
     win.wait_for_close()
 
 if __name__ == '__main__':

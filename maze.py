@@ -1,4 +1,5 @@
 import time
+import random
 
 class Cell:
     def __init__(self):
@@ -69,3 +70,22 @@ class Maze:
     def animate(self):
         self.win.redraw()
         time.sleep(0.05)
+
+    def break_walls(self, cx, cy, visited = set()):
+        visited.add((cx, cy))
+        candidates = []
+        if cx > 0:
+            candidates.append((cx - 1, cy))
+        if cy > 0:
+            candidates.append((cx, cy - 1))
+        if cx < self.num_cells_x - 1:
+            candidates.append((cx + 1, cy))
+        if cy < self.num_cells_y - 1:
+            candidates.append((cx, cy + 1))
+        while len(candidates) > 0:
+            next = random.choice(candidates)
+            candidates.remove(next)
+            if next not in visited:
+                # TODO break the actual walls, yknow
+                (ncx, ncy) = next
+                self.break_walls(ncx, ncy, visited)
