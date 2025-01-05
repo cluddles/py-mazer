@@ -1,13 +1,15 @@
 import time
 import random
 
+from geom import Point, Dir
+
 class Cell:
     def __init__(self):
-        self._e = True
-        self._s = True
+        self.e = True
+        self.s = True
 
 class Maze:
-    def __init__(self, num_cells_x, num_cells_y, x1 = 0, y1 = 0, cell_width = 16, cell_height = 16, win = None):
+    def __init__(self, num_cells_x, num_cells_y, x1 = 0, y1 = 0, cell_width = 16, cell_height = 16, win = None, seed = 1):
         self.num_cells_x = num_cells_x
         self.num_cells_y = num_cells_y
         self.x1 = x1
@@ -16,6 +18,8 @@ class Maze:
         self.cell_height = cell_height
         self.win = win
         self._create_cells()
+        if seed is not None:
+            random.seed(seed)
 
     def _create_cells(self):
         self._cells = []
@@ -29,12 +33,12 @@ class Maze:
         return self._cells[self._cell_index(cx, cy)]
 
     def cell_draw_pos(self, cx, cy):
-        return (self.x1 + cx * self.cell_width, self.y1 + cy * self.cell_height)
+        return Point(self.x1 + cx * self.cell_width, self.y1 + cy * self.cell_height)
 
     def draw_cell(self, cx, cy):
         cell = self.cell_at(cx, cy)
-        e = cell._e
-        s = cell._s
+        e = cell.e
+        s = cell.s
         (x1, y1) = self.cell_draw_pos(cx, cy)
         (x2, y2) = self.cell_draw_pos(cx + 1, cy + 1)
         if e:
@@ -44,14 +48,14 @@ class Maze:
 
     def redraw_cell(self, cx, cy):
         cell = self.cell_at(cx, cy)
-        e = cell._e
-        s = cell._s
+        e = cell.e
+        s = cell.s
         (x1, y1) = self.cell_draw_pos(cx, cy)
         (x2, y2) = self.cell_draw_pos(cx + 1, cy + 1)
         blank_col = "white"
         wall_col = "black"
-        self.win.draw_line(x2, y1, x2, y2, wall_col if e else blank_col)
-        self.win.draw_line(x1, y2, x2, y2, wall_col if s else blank_col)
+        self.win.draw_line(x2, y1, x2, y2, fill_colour = wall_col if e else blank_col)
+        self.win.draw_line(x1, y2, x2, y2, fill_colour = wall_col if s else blank_col)
 
     def draw_all(self):
         self.win.draw_line(self.x1, self.y1, self.x1 + self.num_cells_x * self.cell_width, self.y1)
@@ -67,25 +71,43 @@ class Maze:
         hch = self.cell_height / 2
         self.win.draw_line(x1 + hcw, y1 + hch, x2 + hcw, y2 + hch, fill_colour = "gray" if undo else "red")
 
-    def animate(self):
+    def animate(self, anim_delay = 0.005):
         self.win.redraw()
-        time.sleep(0.05)
+        time.sleep(anim_delay)
 
-    def break_walls(self, cx, cy, visited = set()):
-        visited.add((cx, cy))
+    def break_walls(self, cx, cy, visited = set(), anim_delay = 0.005):
+        # Visit each point once
+        visited.add(Point(cx, cy))
+        # Determine valid neighbours that we can visit (don't check visited at this point)
         candidates = []
         if cx > 0:
-            candidates.append((cx - 1, cy))
+            candidates.append(Dir.W)
         if cy > 0:
-            candidates.append((cx, cy - 1))
+            candidates.append(Dir.N)
         if cx < self.num_cells_x - 1:
-            candidates.append((cx + 1, cy))
+            candidates.append(Dir.E)
         if cy < self.num_cells_y - 1:
-            candidates.append((cx, cy + 1))
+            candidates.append(Dir.S)
+        # Randomly select a neighbour and, if unvisited, break wall between us and it
+        # Then call this method for the neighbour
         while len(candidates) > 0:
-            next = random.choice(candidates)
-            candidates.remove(next)
+            next_dir = random.choice(candidates)
+            candidates.remove(next_dir)
+            next = Point(cx + next_dir.value.x, cy + next_dir.value.y)
             if next not in visited:
-                # TODO break the actual walls, yknow
+                # Break walls in relevant cell (neighbour for N, W edges), and redraw
+                if next_dir == Dir.E:
+                    self.cell_at(cx, cy).e = False
+                    self.redraw_cell(cx, cy)
+                elif next_dir == Dir.S:
+                    self.cell_at(cx, cy).s = False
+                    self.redraw_cell(cx, cy)
+                elif next_dir == Dir.W:
+                    self.cell_at(cx-1, cy).e = False
+                    self.redraw_cell(cx-1, cy)
+                elif next_dir == Dir.N:
+                    self.cell_at(cx, cy-1).s = False
+                    self.redraw_cell(cx, cy-1)
+                self.animate(anim_delay)
                 (ncx, ncy) = next
-                self.break_walls(ncx, ncy, visited)
+                self.break_walls(ncx, ncy, visited, anim_delay)
